@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'fastapi'
+    }
 
     stages {
 
@@ -16,7 +18,7 @@ pipeline {
                 cd backend
 
                 rm -rf venv
-                python3 -m venv venv
+                python3.11 -m venv venv
 
                 ./venv/bin/python -m pip install --upgrade pip
                 ./venv/bin/pip install -r requirements.txt
@@ -28,7 +30,6 @@ pipeline {
             steps {
                 sh '''
                 cd frontend
-
                 npm install
                 npm run build
                 '''
@@ -38,8 +39,8 @@ pipeline {
         stage('Deploy Frontend') {
             steps {
                 sh '''
-                sudo rm -rf /var/www/html/*
-                sudo cp -r frontend/dist/* /var/www/html/
+                sudo rm -rf /usr/share/nginx/html/*
+                sudo cp -r frontend/dist/* /usr/share/nginx/html/
                 '''
             }
         }
@@ -47,13 +48,7 @@ pipeline {
         stage('Restart Backend') {
             steps {
                 sh '''
-                sudo pkill -f uvicorn || true
-                sleep 5
-
-                sudo systemctl daemon-reload
                 sudo systemctl restart fastapi
-
-                sleep 5
                 sudo systemctl status fastapi --no-pager
                 '''
             }
@@ -71,8 +66,8 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                curl -I http://localhost || true
-                curl http://localhost:8000/ || true
+                curl -I http://localhost
+                curl http://localhost:8000/
                 '''
             }
         }
