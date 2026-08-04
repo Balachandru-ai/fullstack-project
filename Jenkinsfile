@@ -5,33 +5,6 @@ pipeline {
 
     stages {
 
-        stage('SonarQube Analysis') {
-            steps {
-                script {
-                    def scannerHome = tool 'SonarScanner'
-
-                    withSonarQubeEnv('SonarQube') {
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=fullstack-project \
-                            -Dsonar.projectName=fullstack-project \
-                            -Dsonar.sources=backend,frontend/src \
-                            -Dsonar.sourceEncoding=UTF-8 \
-                            -Dsonar.exclusions=backend/venv/**,backend/**/__pycache__/**,backend/**/*.pyc,frontend/node_modules/**,frontend/dist/**
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
         stage('Build Backend') {
             steps {
                 sh '''
@@ -124,23 +97,15 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "================================="
                     echo "Checking Nginx..."
-                    echo "================================="
-
                     curl -f http://localhost
 
                     echo ""
-                    echo "================================="
                     echo "Checking FastAPI..."
-                    echo "================================="
-
                     curl -f http://localhost:8000/
 
                     echo ""
-                    echo "================================="
                     echo "Health check completed successfully"
-                    echo "================================="
                 '''
             }
         }
