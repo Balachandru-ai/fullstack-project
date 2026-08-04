@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'fastapi'
+        label 'sonarqube'
     }
 
     stages {
