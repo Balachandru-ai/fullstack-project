@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent {
         label 'sonarqube'
@@ -5,23 +6,20 @@ pipeline {
 
     stages {
 
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/Premchand-96/fullstack-project.git'
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        sonar-scanner \
-                        -Dsonar.projectKey=fullstack-project \
-                        -Dsonar.projectName=fullstack-project \
-                        -Dsonar.sources=backend,frontend/src \
-                        -Dsonar.sourceEncoding=UTF-8
-                    '''
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=fullstack-project \
+                            -Dsonar.projectName=fullstack-project \
+                            -Dsonar.sources=backend,frontend/src \
+                            -Dsonar.sourceEncoding=UTF-8
+                        """
+                    }
                 }
             }
         }
@@ -125,3 +123,4 @@ pipeline {
         }
     }
 }
+```
