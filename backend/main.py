@@ -8,7 +8,7 @@ from database import engine
 app = FastAPI()
 
 origins = [
-    "http://100.51.247.49"
+    "http://16.16.194.53"
 ]
 
 app.add_middleware(
