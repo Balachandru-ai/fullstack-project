@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent {
         label 'sonarqube'
@@ -123,4 +122,3 @@ pipeline {
         }
     }
 }
-```
