@@ -11,22 +11,14 @@ pipeline {
                     def scannerHome = tool 'SonarScanner'
 
                     withSonarQubeEnv('SonarQube') {
-                        withCredentials([
-                            string(
-                                credentialsId: 'sonarqube-token',
-                                variable: 'SONAR_TOKEN'
-                            )
-                        ]) {
-                            sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=fullstack-project \
-                                -Dsonar.projectName=fullstack-project \
-                                -Dsonar.sources=backend,frontend/src \
-                                -Dsonar.sourceEncoding=UTF-8 \
-                                -Dsonar.token=\$SONAR_TOKEN \
-                                -Dsonar.exclusions=backend/venv/**,backend/**/__pycache__/**,backend/**/*.pyc,frontend/node_modules/**,frontend/dist/**
-                            """
-                        }
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=fullstack-project \
+                            -Dsonar.projectName=fullstack-project \
+                            -Dsonar.sources=backend,frontend/src \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.exclusions=backend/venv/**,backend/**/__pycache__/**,backend/**/*.pyc,frontend/node_modules/**,frontend/dist/**
+                        """
                     }
                 }
             }
@@ -90,7 +82,6 @@ pipeline {
                     echo "Deploying frontend..."
 
                     sudo rm -rf /usr/share/nginx/html/*
-
                     sudo cp -r frontend/dist/* /usr/share/nginx/html/
 
                     echo "Frontend deployment completed"
@@ -106,7 +97,6 @@ pipeline {
                     echo "Restarting FastAPI..."
 
                     sudo systemctl restart fastapi
-
                     sudo systemctl status fastapi --no-pager
 
                     echo "FastAPI restarted successfully"
@@ -122,7 +112,6 @@ pipeline {
                     echo "Restarting Nginx..."
 
                     sudo systemctl restart nginx
-
                     sudo systemctl status nginx --no-pager
 
                     echo "Nginx restarted successfully"
