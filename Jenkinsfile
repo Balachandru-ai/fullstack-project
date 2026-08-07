@@ -5,6 +5,8 @@ pipeline {
 
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
+        REPO_URL = "https://github.com/Balachandru-ai/fullstack-project.git"
+        GIT_BRANCH = "main"
     }
 
     stages {
@@ -15,7 +17,7 @@ pipeline {
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Build Backend Docker Image') {
             steps {
                 sh '''
                 docker build -t employee-backend:${IMAGE_TAG} ./backend
@@ -23,7 +25,7 @@ pipeline {
             }
         }
 
-        stage('Build Frontend Image') {
+        stage('Build Frontend Docker Image') {
             steps {
                 sh '''
                 docker build -t employee-frontend:${IMAGE_TAG} ./frontend
@@ -52,35 +54,65 @@ pipeline {
 
         stage('Commit & Push') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'github-creds',
-                                                 usernameVariable: 'USERNAME',
-                                                 passwordVariable: 'TOKEN')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-creds',
+                        usernameVariable: 'USERNAME',
+                        passwordVariable: 'TOKEN'
+                    )
+                ]) {
 
                     sh '''
                     git config user.name "Jenkins"
                     git config user.email "jenkins@example.com"
 
+                    git remote set-url origin https://${USERNAME}:${TOKEN}@github.com/Balachandru-ai/fullstack-project.git
+
+                    git fetch origin
+
+                    git checkout -B main origin/main
+
                     git add k8s/
 
-                    git diff --cached --quiet || git commit -m "Deploy Build ${IMAGE_TAG}"
+                    if git diff --cached --quiet
+                    then
+                        echo "No changes to commit."
+                    else
+                        git commit -m "Deploy Build ${IMAGE_TAG}"
 
-                    git push https://${USERNAME}:${TOKEN}@github.com/Balachandru-ai/fullstack-project.git main
+                        git pull --rebase origin main
+
+                        git push origin main
+                    fi
                     '''
                 }
             }
         }
 
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                kubectl get deployments
+                kubectl get pods
+                kubectl get svc
+                '''
+            }
+        }
     }
 
     post {
 
         success {
+            echo "======================================"
             echo "Deployment Successful"
+            echo "ArgoCD will sync automatically"
+            echo "======================================"
         }
 
         failure {
+            echo "======================================"
             echo "Deployment Failed"
+            echo "======================================"
         }
-
     }
 }
