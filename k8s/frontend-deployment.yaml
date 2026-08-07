@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: employee-frontend
-        image: employee-frontend:21
+        image: employee-frontend:23
         imagePullPolicy: Never
         ports:
         - containerPort: 80
