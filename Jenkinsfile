@@ -3,125 +3,84 @@ pipeline {
         label 'sonarqube'
     }
 
+    environment {
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
-        stage('Build Backend') {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Backend Image') {
             steps {
                 sh '''
-                    set -e
-
-                    cd backend
-
-                    echo "Creating Python virtual environment..."
-
-                    rm -rf venv
-                    python3.11 -m venv venv
-
-                    echo "Installing Python dependencies..."
-
-                    ./venv/bin/python -m pip install --upgrade pip
-                    ./venv/bin/pip install -r requirements.txt
-
-                    echo "Backend build completed"
+                docker build -t employee-backend:${IMAGE_TAG} ./backend
                 '''
             }
         }
 
-        stage('Build Frontend') {
+        stage('Build Frontend Image') {
             steps {
                 sh '''
-                    set -e
-
-                    cd frontend
-
-                    echo "Installing frontend dependencies..."
-
-                    npm install
-
-                    echo "Building frontend..."
-
-                    npm run build
-
-                    echo "Frontend build completed"
+                docker build -t employee-frontend:${IMAGE_TAG} ./frontend
                 '''
             }
         }
 
-        stage('Deploy Frontend') {
+        stage('Load Images into Minikube') {
             steps {
                 sh '''
-                    set -e
-
-                    echo "Deploying frontend..."
-
-                    sudo rm -rf /usr/share/nginx/html/*
-                    sudo cp -r frontend/dist/* /usr/share/nginx/html/
-
-                    echo "Frontend deployment completed"
+                minikube image load employee-backend:${IMAGE_TAG}
+                minikube image load employee-frontend:${IMAGE_TAG}
                 '''
             }
         }
 
-        stage('Restart Backend') {
+        stage('Update Kubernetes YAML') {
             steps {
                 sh '''
-                    set -e
+                sed -i "s|image: employee-backend:.*|image: employee-backend:${IMAGE_TAG}|g" k8s/backend-deployment.yaml
 
-                    echo "Restarting FastAPI..."
-
-                    sudo systemctl restart fastapi
-                    sudo systemctl status fastapi --no-pager
-
-                    echo "FastAPI restarted successfully"
+                sed -i "s|image: employee-frontend:.*|image: employee-frontend:${IMAGE_TAG}|g" k8s/frontend-deployment.yaml
                 '''
             }
         }
 
-        stage('Restart Nginx') {
+        stage('Commit & Push') {
             steps {
-                sh '''
-                    set -e
+                withCredentials([usernamePassword(credentialsId: 'github-creds',
+                                                 usernameVariable: 'USERNAME',
+                                                 passwordVariable: 'TOKEN')]) {
 
-                    echo "Restarting Nginx..."
+                    sh '''
+                    git config user.name "Jenkins"
+                    git config user.email "jenkins@example.com"
 
-                    sudo systemctl restart nginx
-                    sudo systemctl status nginx --no-pager
+                    git add k8s/
 
-                    echo "Nginx restarted successfully"
-                '''
+                    git diff --cached --quiet || git commit -m "Deploy Build ${IMAGE_TAG}"
+
+                    git push https://${USERNAME}:${TOKEN}@github.com/Balachandru-ai/fullstack-project.git main
+                    '''
+                }
             }
         }
 
-        stage('Health Check') {
-            steps {
-                sh '''
-                    set -e
-
-                    echo "Checking Nginx..."
-                    curl -f http://localhost
-
-                    echo ""
-                    echo "Checking FastAPI..."
-                    curl -f http://localhost:8000/
-
-                    echo ""
-                    echo "Health check completed successfully"
-                '''
-            }
-        }
     }
 
     post {
+
         success {
-            echo '================================='
-            echo 'Deployment Successful'
-            echo '================================='
+            echo "Deployment Successful"
         }
 
         failure {
-            echo '================================='
-            echo 'Deployment Failed'
-            echo '================================='
+            echo "Deployment Failed"
         }
+
     }
 }
